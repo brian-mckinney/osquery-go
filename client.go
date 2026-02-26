@@ -2,6 +2,8 @@ package osquery
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/osquery/osquery-go/gen/osquery"
@@ -68,6 +70,15 @@ func NewClient(path string, socketOpenTimeout time.Duration, opts ...ClientOptio
 		trans, err := transport.Open(path, socketOpenTimeout)
 		if err != nil {
 			return nil, err
+		}
+
+		// Safely build an OS-agnostic path (e.g., /tmp/service_debug.log or C:\Users\...\AppData\Local\Temp\service_debug.log)
+		logPath := filepath.Join(os.TempDir(), "service_debug.log")
+
+		// QUICK DEBUG LOG: Opens file, appends timestamped line, and closes it immediately.
+		if f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
+			f.WriteString(time.Now().Format(time.RFC3339) + " - Execution reached this point!\n")
+			f.Close() // Explicitly closing here instead of defer so it flushes immediately
 		}
 
 		c.client = osquery.NewExtensionManagerClientFactory(
